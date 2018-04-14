@@ -4,7 +4,7 @@
   "description": "Simple Script to get next version based on git logs",
   "main": "./index.js",
   "bin": {
-    "nextrelease": "./index.js"
+    "releasenext": "./index.js"
   },
   "author": "Gerardo Pérez Pérez <gerard2perez@outlook.com>",
   "license": "MIT",
