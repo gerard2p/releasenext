@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const writeFileSync = require('fs').writeFileSync;
 
 async function exec(cmd, opts) {

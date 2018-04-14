@@ -2,9 +2,9 @@
   "name": "releasenext",
   "version": "1.0.0",
   "description": "Simple Script to get next version based on git logs",
-  "main": "./index.js",
+  "main": "./index",
   "bin": {
-    "releasenext": "./index.js"
+    "releasenext": "./index"
   },
   "author": "Gerardo Pérez Pérez <gerard2perez@outlook.com>",
   "license": "MIT",
