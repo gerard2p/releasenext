@@ -1,0 +1,147 @@
+const writeFileSync = require('fs').writeFileSync;
+
+async function exec(cmd, opts) {
+    return new Promise((resolve, reject) => {
+        require('child_process').exec(cmd, opts, (error, stdout, stderr) => {
+            if (error) {
+            	reject(error);
+            } else {
+            	resolve([stdout, stderr]);
+            }
+        });
+    });
+}
+class Version {
+	constructor (input) {
+		let v = input.replace('v', '').split('.');
+		this.major = parseInt(v[0]);
+		this.minor = parseInt(v[1]);
+		this.fix = parseInt(v[2]);
+	}
+	toString () {
+		return `${this.major}.${this.minor}.${this.fix}`;
+	}
+	static compare (...args) {
+		let [a, b] = args;
+		if (typeof a === 'string') {
+			a = new Version(a);
+			b = new Version(b);
+		}
+		let major = (a.major - b.major) * 10000;
+		let minor = (a.minor - b.minor) * 100;
+		let fix = a.fix - b.fix;
+		return major + minor + fix;
+	}
+}
+class GitLog {
+	constructor (pieces) {
+		try {
+			this.commit = pieces.splice(0, 1)[0].replace('commit ', '');
+			this.author = pieces.splice(0, 1)[0].replace('Author:', '').trim();
+			this.date = pieces.splice(0, 1)[0].replace('Date:', '').trim();
+			this.body = [];
+			this.breaking = [];
+			pieces.splice(0, 1);
+			if (pieces.length < 2) {
+				this.type = 'undefined';
+				this.subject = pieces.join(' ').trim();
+				this.scope = '';
+			} else {
+				this.type = pieces.splice(0, 1)[0].split(':');
+				this.subject = (this.type[1] || '').trim();
+				this.type = this.type[0].replace(')', '').split('(');
+				this.scope = this.type[1] ? this.type[1].trim() : '';
+				this.type = this.type[0].trim();
+				pieces.splice(0, 1);
+				while (pieces.length > 0) {
+					let [line] = pieces.splice(0, 1);
+					if (line.trim().length < 2) {
+						break;
+					}
+					this.body.push(line.trim());
+				}
+				this.breaking.push(...pieces);
+			}
+		} catch (e) {
+			console.log(e);
+			console.log(this);
+			console.log(pieces);
+			return;
+		}
+	}
+}
+function parseCommits (rawlogs) {
+	let buffer = [];
+	let logs = [];
+	for (const log of rawlogs.split('\n')) {
+		if (log.indexOf('commit') === 0) {
+			if (buffer.length) {
+				logs.push(new GitLog(buffer));
+				buffer = [];
+			}
+		}
+		buffer.push(log);
+	}
+	if (buffer.length > 1) {
+		logs.push(new GitLog(buffer));
+	}
+	return logs;
+}
+const path = require('path');
+(async ()=>{
+	let package = require(path.resolve('./package.json'));
+	let version = new Version(package.version);
+	let [tags = ''] = await exec(`git tag`);
+	tags = tags.split('\n').filter(e => e);
+	tags.sort(Version.compare);
+	tags.reverse();
+
+	let [from] = tags;
+	from = from ? `${from}..HEAD` : '';
+
+	let [rawlogs] = await exec(`git log ${from}`);
+
+	let logs = parseCommits(rawlogs)
+	let fix = false;
+	let feat = false;
+	let br = false;
+	for (const log of logs) {
+		if (log.breaking.length > 0) {
+			br = true;
+		} else if (log.type === 'fix') {
+			fix = true;
+		} else if (log.type === 'feat') {
+			feat = true;
+		}
+	}
+	if (br) {
+		version.major++;
+		version.minor = 0;
+		version.fix = 0;
+	} else if (feat) {
+		version.minor++;
+		version.fix = 0;
+	} else if (fix) {
+		version.fix++;
+	}
+	let action = process.argv[2];
+	let publishnew = package.version !== version.toString();
+	if(action === 'update' || action === 'gemfury') {
+		if(publishnew) {
+			package.version = version.toString();
+			writeFileSync('./package.json', JSON.stringify(package, null, 2));
+			await exec(`git add .`);
+			await exec(`git commit -m "dump version ${package.version}"`);
+			await exec(`git tag v${version.toString()}`);
+		}
+	}
+	if(action === 'gemfury') {
+		if(publishnew) {
+			let file = (await exec(`npm pack`))[0].replace('\n','');
+			await exec(`curl -F package=@${file} https://XiksdxDpwjXaPYbrh2yy@push.fury.io/gerard2p/`);
+		}
+	}
+	if(action === 'version') {
+		console.log(version.toString());
+	}
+})();
