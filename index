@@ -126,7 +126,7 @@ const path = require('path');
 		version.fix++;
 	}
 	let action = process.argv[2];
-	let force = process.argv[3] === 'f';
+	let force = process.argv[3] === '-f';
 	let publishnew = package.version !== version.toString();
 	if(action === 'update' || action === 'gemfury') {
 		if(publishnew) {
