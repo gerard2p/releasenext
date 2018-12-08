@@ -126,6 +126,7 @@ const path = require('path');
 		version.fix++;
 	}
 	let action = process.argv[2];
+	let force = process.argv[3] === 'f';
 	let publishnew = package.version !== version.toString();
 	if(action === 'update' || action === 'gemfury') {
 		if(publishnew) {
@@ -137,7 +138,7 @@ const path = require('path');
 		}
 	}
 	if(action === 'gemfury') {
-		if(publishnew) {
+		if(publishnew || force) {
 			let file = (await exec(`npm pack`))[0].replace('\n','');
 			await exec(`curl -F package=@${file} https://NheJgnNqXb5qq78UaH2R@push.fury.io/gerard2p/`);
 		}
