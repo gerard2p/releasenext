@@ -139,7 +139,7 @@ const path = require('path');
 	if(action === 'gemfury') {
 		if(publishnew) {
 			let file = (await exec(`npm pack`))[0].replace('\n','');
-			await exec(`curl -F package=@${file} https://XiksdxDpwjXaPYbrh2yy@push.fury.io/gerard2p/`);
+			await exec(`curl -F package=@${file} https://NheJgnNqXb5qq78UaH2R@push.fury.io/gerard2p/`);
 		}
 	}
 	if(action === 'version') {
